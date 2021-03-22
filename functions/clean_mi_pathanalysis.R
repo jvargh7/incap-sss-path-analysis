@@ -1,0 +1,57 @@
+
+
+adjusted_ci = function(model_list){
+  D = length(model_list)
+  
+  df = purrr::imap_dfr(model_list ,
+                       function(x,name) {
+                         x %>%
+                           broom::tidy(.) %>% 
+                           mutate(index = name)
+                       })
+  
+  df = df %>% 
+    dplyr::filter(!is.na(std.error),op=="~") %>% 
+    mutate(W_d = std.error^2) %>% 
+    group_by(term) %>% 
+    mutate(B_D = var(estimate)) %>% 
+    summarize(B_D = mean(B_D),
+              W_D = mean(W_d),
+              theta_D = mean(estimate)
+    ) %>% 
+    ungroup() %>% 
+    
+    mutate(T_D = W_D + (1 + 1/D)*B_D,
+           gamma_D = (1 + 1/D)*(B_D/T_D),
+           nu = (D-1)*((1+ (1/D+1)*(W_D/B_D))^2)
+    ) %>% 
+    mutate(L = theta_D + qt(p = 0.025,df = nu)*((T_D)^((1/2))),
+           U = theta_D + qt(p = 0.975,df = nu)*((T_D)^((1/2)))
+    )
+  
+  return(df)
+  
+}
+
+
+
+
+
+clean_mi_pathanalysis <- function(model_list){
+  
+  
+  
+  res_out <- adjusted_ci(model_list) %>%
+    mutate(Coefficient = paste0(round(theta_D,2)," \t(",
+                                round(L,2),", ",
+                                round(U,2),")"),
+           lci = L,
+           uci = U
+           
+    ) %>% 
+    separate(term,c("dv","iv")," ~ ")
+  
+  
+  return(res_out)
+  
+}
