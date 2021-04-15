@@ -23,7 +23,7 @@ adjusted_ci = function(model_list){
     
     mutate(T_D = W_D + (1 + 1/D)*B_D,
            gamma_D = (1 + 1/D)*(B_D/T_D),
-           nu = (D-1)*((1+ (1/D+1)*(W_D/B_D))^2)
+           nu = (D-1)*((1+ (D/(D+1))*(W_D/B_D))^2)
     ) %>% 
     mutate(L = theta_D + qt(p = 0.025,df = nu)*((T_D)^((1/2))),
            U = theta_D + qt(p = 0.975,df = nu)*((T_D)^((1/2)))
