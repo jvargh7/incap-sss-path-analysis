@@ -7,7 +7,8 @@ adjusted_ci = function(model_list){
                        function(x,name) {
                          x %>%
                            broom::tidy(.) %>% 
-                           mutate(index = name)
+                           mutate(index = name,
+                                  dfcom = fit@SampleStats@ntotal[[1]])
                        })
   
   df = df %>% 
@@ -17,16 +18,20 @@ adjusted_ci = function(model_list){
     mutate(B_D = var(estimate)) %>% 
     summarize(B_D = mean(B_D),
               W_D = mean(W_d),
-              theta_D = mean(estimate)
+              theta_D = mean(estimate),
+              dfcom = mean(dfcom)
     ) %>% 
     ungroup() %>% 
     
     mutate(T_D = W_D + (1 + 1/D)*B_D,
            gamma_D = (1 + 1/D)*(B_D/T_D),
-           nu = (D-1)*((1+ (1/(D+1))*(W_D/B_D))^2)
+           nu = (D-1)*((1+ (1/(D+1))*(W_D/B_D))^2),
+           nu2 = (D-1)/(gamma_D)^2, # equivalent to mice's dfold; (D/(D+1)) and not (1/(D+1))
+           nu_improved = mice:::barnard.rubin(D,B_D,T_D,dfcom = dfcom) 
     ) %>% 
-    mutate(L = theta_D + qt(p = 0.025,df = nu)*((T_D)^((1/2))),
-           U = theta_D + qt(p = 0.975,df = nu)*((T_D)^((1/2)))
+    mutate(L = theta_D + qt(p = 0.025,df = nu2)*((T_D)^((1/2))),
+           U = theta_D + qt(p = 0.975,df = nu2)*((T_D)^((1/2))),
+           sqrt_T_D = ((T_D)^((1/2)))
     )
   
   return(df)
